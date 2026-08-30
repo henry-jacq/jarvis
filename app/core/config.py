@@ -20,6 +20,16 @@ class Settings(BaseSettings):
     HOST: str = "0.0.0.0"
     PORT: int = 8000
 
+    # Queue & Worker Settings
+    REDIS_URL: Optional[str] = None
+    WORKER_CONCURRENCY: int = 4
+    DEFAULT_MAX_ATTEMPTS: int = 3
+
+    # Workflow & Execution Limits
+    MAX_WORKFLOW_DEPTH: int = 3
+    MAX_NODES: int = 20
+    MAX_PARALLEL_BRANCHES: int = 5
+
     # Platform
     LOG_LEVEL: str = "INFO"
     DEFAULT_TOKEN_BUDGET: int = 4096

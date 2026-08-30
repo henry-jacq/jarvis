@@ -12,9 +12,13 @@ from app.services.settings_service import SettingsService
 from app.services.agent_service import AgentService
 from app.services.conversation_service import ConversationService
 from app.services.tool_registry import ToolRegistry
+from app.services.job_manager import JobManager
+from app.services.scheduler_service import SchedulerService
 from app.schemas.setting import AppSettingCreate
 from app.schemas.agent import AgentCreate, AgentVersionCreate
 from app.schemas.conversation import ConversationCreate, MessageCreate
+from app.schemas.job import JobCreate
+from app.schemas.schedule import ScheduleCreate
 from scripts.init_db import ensure_mysql_database_exists
 
 def seed_demo_data():
@@ -43,6 +47,27 @@ def seed_demo_data():
             data_type="integer",
             description="Default execution token budget"
         ))
+        settings_svc.set_setting(AppSettingCreate(
+            key="MAX_WORKFLOW_DEPTH",
+            value="3",
+            category="limits",
+            data_type="integer",
+            description="Maximum nested workflow depth limit"
+        ))
+        settings_svc.set_setting(AppSettingCreate(
+            key="MAX_NODES",
+            value="20",
+            category="limits",
+            data_type="integer",
+            description="Maximum workflow node count limit"
+        ))
+        settings_svc.set_setting(AppSettingCreate(
+            key="MAX_PARALLEL_BRANCHES",
+            value="5",
+            category="limits",
+            data_type="integer",
+            description="Maximum parallel workflow branch limit"
+        ))
         print("System App Settings populated.")
 
         # 3. Project Workspace
@@ -56,12 +81,12 @@ def seed_demo_data():
                 structured_context={
                     "primary_language": "Python 3.11+",
                     "architecture": "FastAPI + LangGraph + MySQL",
-                    "database_schema": "App Settings, Projects, Conversations, Agents, Memory, Executions",
+                    "database_schema": "App Settings, Projects, Conversations, Agents, Memory, Executions, Generic Queue, Jobs",
                     "security_policy": "Zero-trust tool execution, Agents cannot directly access DB"
                 },
                 project_tasks=[
                     {"id": "t1", "title": "Implement App Settings Store", "status": "completed"},
-                    {"id": "t2", "title": "Implement Conversations & Messages", "status": "completed"},
+                    {"id": "t2", "title": "Implement Generic Queue & Job Worker", "status": "completed"},
                     {"id": "t3", "title": "Implement LangGraph Simple Agent Harness", "status": "completed"}
                 ],
                 project_documents=[
@@ -105,20 +130,21 @@ def seed_demo_data():
                 project_id=proj.id,
                 initial_message=MessageCreate(
                     role="user",
-                    content="How do we enforce zero-trust tool execution in Jarvis?"
+                    content="How do we handle background queues and jobs in Jarvis?"
                 )
             )
         )
         conv_svc.add_message(conv.id, MessageCreate(
             role="assistant",
-            content="Tool execution requests are evaluated outside the LLM by the Permission Engine against published Agent policies."
+            content="MySQL is the primary durable queue store (queue_messages table) with generic work payloads. Redis is an optional secondary notification dispatch broker."
         ))
         print(f"Created Conversation: {conv.title} ({conv.id})")
 
         # 6. Agent (Coding Agent)
         agent_service = AgentService(db)
         existing_agents = agent_service.list_agents()
-        if not existing_agents:
+        agent = existing_agents[0] if existing_agents else None
+        if not agent:
             agent = agent_service.create_agent(
                 AgentCreate(
                     name="Coding Agent",
@@ -147,7 +173,33 @@ def seed_demo_data():
             )
             print(f"Created Agent: {agent.name} ({agent.id})")
 
-        print("Demo data seeding completed successfully!")
+        # 7. Job & Schedule
+        job_mgr = JobManager(db)
+        demo_job = job_mgr.submit_job(
+            JobCreate(
+                task="Perform background code quality check",
+                agent_id=agent.id,
+                project_id=proj.id,
+                priority=10
+            )
+        )
+        print(f"Enqueued Demo Background Job: {demo_job.id}")
+
+        sched_svc = SchedulerService(db)
+        existing_scheds = sched_svc.list_schedules()
+        if not existing_scheds:
+            sched = sched_svc.create_schedule(
+                ScheduleCreate(
+                    name="Daily Project Inspection",
+                    agent_id=agent.id,
+                    project_id=proj.id,
+                    schedule_expression="interval:86400",
+                    task_input={"task": "Run daily automated project analysis"}
+                )
+            )
+            print(f"Created Recurring Schedule: {sched.name} ({sched.id})")
+
+        print("Phase 2 Demo data seeding completed successfully!")
 
     finally:
         db.close()

@@ -5,6 +5,7 @@ from app.models.projects import Project
 from app.models.conversations import Conversation, Message
 from app.services.memory_manager import MemoryManager
 from app.services.settings_service import SettingsService
+from app.core.config import settings
 
 class ExecutionContext:
     def __init__(
@@ -64,9 +65,14 @@ class ContextBuilder:
         conversation_id: Optional[str] = None,
         override_config: Optional[Dict[str, Any]] = None
     ) -> ExecutionContext:
-        # 1. Fetch App Settings
+        # 1. Fetch App Settings & Defaults
         settings_list = self.settings_service.list_settings()
         app_settings = {s.key: s.value for s in settings_list if not s.is_secret}
+        
+        # Enforce settings defaults for workflow resource limits
+        app_settings.setdefault("MAX_WORKFLOW_DEPTH", str(settings.MAX_WORKFLOW_DEPTH))
+        app_settings.setdefault("MAX_NODES", str(settings.MAX_NODES))
+        app_settings.setdefault("MAX_PARALLEL_BRANCHES", str(settings.MAX_PARALLEL_BRANCHES))
 
         # 2. Resolve Memory Scopes
         mem_policy = agent_version.memory_policy or {}

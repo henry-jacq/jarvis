@@ -8,6 +8,8 @@ from app.models.models import ModelProvider, ModelConfig
 from app.models.tools import Tool, ToolVersion
 from app.models.memory import GlobalMemory, AgentMemory, ProjectMemory
 from app.models.executions import Execution, ExecutionEvent, Artifact
+from app.models.queue import QueueMessage
+from app.models.jobs import Job, JobAttempt, Schedule
 from app.models.security import PermissionPolicy, AuditEvent
 
 __all__ = [
@@ -30,6 +32,10 @@ __all__ = [
     "Execution",
     "ExecutionEvent",
     "Artifact",
+    "QueueMessage",
+    "Job",
+    "JobAttempt",
+    "Schedule",
     "PermissionPolicy",
     "AuditEvent",
 ]
