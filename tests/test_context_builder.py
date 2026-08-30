@@ -2,7 +2,7 @@ import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from app.core.db import Base
-from app.models.applications import Application
+from app.models.settings import AppSetting
 from app.models.projects import Project
 from app.models.agents import Agent, AgentVersion
 from app.models.memory import GlobalMemory, ProjectMemory
@@ -18,14 +18,14 @@ def db_session():
     session.close()
 
 def test_context_builder_assembly(db_session):
-    app = Application(name="App1", description="Test Application")
-    db_session.add(app)
-    db_session.commit()
+    setting = AppSetting(key="DEFAULT_TOKEN_BUDGET", value="8192", category="limits", data_type="integer")
+    db_session.add(setting)
 
     proj = Project(
-        application_id=app.id,
         name="Jarvis Test Project",
-        structured_context={"primary_language": "Python 3.11", "framework": "FastAPI"}
+        objective="Verify context builder multi-layered prompt assembly",
+        structured_context={"primary_language": "Python 3.11", "framework": "FastAPI"},
+        project_tasks=[{"id": "t1", "title": "Run pytest suite", "status": "pending"}]
     )
     db_session.add(proj)
     
@@ -50,7 +50,7 @@ def test_context_builder_assembly(db_session):
 
     cb = ContextBuilder(db_session)
     exec_ctx = cb.build_context(
-        task="Write tests for Application router",
+        task="Write tests for Conversation router",
         agent=agent,
         agent_version=ver,
         project=proj
@@ -60,7 +60,8 @@ def test_context_builder_assembly(db_session):
     assert "Tester Agent" in prompt
     assert "Always write unit tests for every endpoint." in prompt
     assert "Jarvis Test Project" in prompt
+    assert "Objective: Verify context builder multi-layered prompt assembly" in prompt
     assert "primary_language: Python 3.11" in prompt
     assert "global_rule: Use clear variable names." in prompt
     assert "project_rule: Follow standard REST conventions." in prompt
-    assert "Write tests for Application router" in prompt
+    assert "Write tests for Conversation router" in prompt

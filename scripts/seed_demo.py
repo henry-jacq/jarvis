@@ -6,19 +6,21 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")
 
 from app.core.db import SessionLocal, engine, Base
 import app.models
-from app.models.applications import Application
 from app.models.projects import Project
 from app.models.memory import GlobalMemory, ProjectMemory
+from app.services.settings_service import SettingsService
 from app.services.agent_service import AgentService
+from app.services.conversation_service import ConversationService
 from app.services.tool_registry import ToolRegistry
+from app.schemas.setting import AppSettingCreate
 from app.schemas.agent import AgentCreate, AgentVersionCreate
+from app.schemas.conversation import ConversationCreate, MessageCreate
 from scripts.init_db import ensure_mysql_database_exists
 
 def seed_demo_data():
     ensure_mysql_database_exists()
     db = SessionLocal()
     try:
-        # Create DB tables
         Base.metadata.create_all(bind=engine)
 
         # 1. Register builtin safe tools
@@ -26,44 +28,55 @@ def seed_demo_data():
         tool_reg.register_builtin_tools()
         print("Builtin tools registered.")
 
-        # 2. Application
-        app = db.query(Application).filter(Application.name == "Personal AI Platform").first()
-        if not app:
-            app = Application(
-                name="Personal AI Platform",
-                description="Jarvis Core Agent Environment",
-                status="active"
-            )
-            db.add(app)
-            db.commit()
-            db.refresh(app)
-            print(f"Created Application: {app.name} ({app.id})")
+        # 2. System App Settings
+        settings_svc = SettingsService(db)
+        settings_svc.set_setting(AppSettingCreate(
+            key="DEFAULT_MODEL",
+            value="llama3.2",
+            category="default_model",
+            description="Default LLM model name"
+        ))
+        settings_svc.set_setting(AppSettingCreate(
+            key="DEFAULT_TOKEN_BUDGET",
+            value="4096",
+            category="limits",
+            data_type="integer",
+            description="Default execution token budget"
+        ))
+        print("System App Settings populated.")
 
-        # 3. Project
+        # 3. Project Workspace
         proj = db.query(Project).filter(Project.name == "Jarvis Runtime Platform").first()
         if not proj:
             proj = Project(
-                application_id=app.id,
                 name="Jarvis Runtime Platform",
-                description="Secure context-aware agent runtime and orchestration platform.",
+                objective="Build a secure, context-aware agent runtime & orchestration platform.",
+                description="Self-hosted agent platform running stateless agents over persistent MySQL state.",
                 repository="https://github.com/henry/jarvis",
                 structured_context={
                     "primary_language": "Python 3.11+",
-                    "architecture": "FastAPI + LangGraph + MySQL / SQLite",
-                    "database_schema": "Applications, Projects, Agents, Versions, Memory, Executions",
+                    "architecture": "FastAPI + LangGraph + MySQL",
+                    "database_schema": "App Settings, Projects, Conversations, Agents, Memory, Executions",
                     "security_policy": "Zero-trust tool execution, Agents cannot directly access DB"
-                }
+                },
+                project_tasks=[
+                    {"id": "t1", "title": "Implement App Settings Store", "status": "completed"},
+                    {"id": "t2", "title": "Implement Conversations & Messages", "status": "completed"},
+                    {"id": "t3", "title": "Implement LangGraph Simple Agent Harness", "status": "completed"}
+                ],
+                project_documents=[
+                    {"id": "d1", "title": "Architecture Overview", "type": "markdown", "content": "Stateless Agents, Persistent Platform State."}
+                ]
             )
             db.add(proj)
             db.commit()
             db.refresh(proj)
-            print(f"Created Project: {proj.name} ({proj.id})")
+            print(f"Created Project Workspace: {proj.name} ({proj.id})")
 
         # 4. Global & Project Memory
         g_mem = db.query(GlobalMemory).filter(GlobalMemory.key == "user_coding_preference").first()
         if not g_mem:
             g_mem = GlobalMemory(
-                application_id=app.id,
                 category="preferences",
                 key="user_coding_preference",
                 content="Prefer modular code with explicit type hints and strict error handling.",
@@ -84,16 +97,33 @@ def seed_demo_data():
 
         db.commit()
 
-        # 5. Agent (Coding Agent)
+        # 5. Conversation
+        conv_svc = ConversationService(db)
+        conv = conv_svc.create_conversation(
+            ConversationCreate(
+                title="Jarvis Architecture Discussion",
+                project_id=proj.id,
+                initial_message=MessageCreate(
+                    role="user",
+                    content="How do we enforce zero-trust tool execution in Jarvis?"
+                )
+            )
+        )
+        conv_svc.add_message(conv.id, MessageCreate(
+            role="assistant",
+            content="Tool execution requests are evaluated outside the LLM by the Permission Engine against published Agent policies."
+        ))
+        print(f"Created Conversation: {conv.title} ({conv.id})")
+
+        # 6. Agent (Coding Agent)
         agent_service = AgentService(db)
-        existing_agent = agent_service.list_agents()
-        if not existing_agent:
+        existing_agents = agent_service.list_agents()
+        if not existing_agents:
             agent = agent_service.create_agent(
                 AgentCreate(
                     name="Coding Agent",
                     role="Senior Full-Stack Engineer",
-                    purpose="Analyzes requirements, inspects code files, and proposes high-quality python/fastapi implementations.",
-                    application_id=app.id,
+                    purpose="Analyzes requirements, inspects code files, and proposes high-quality implementations.",
                     initial_version=AgentVersionCreate(
                         system_prompt=(
                             "You are a Senior Full-Stack Engineer agent running inside the Jarvis Agent Platform. "

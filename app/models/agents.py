@@ -13,7 +13,6 @@ class Agent(Base):
     __tablename__ = "agents"
 
     id = Column(String(36), primary_key=True, default=generate_uuid)
-    application_id = Column(String(36), ForeignKey("applications.id"), nullable=True)
     name = Column(String(255), nullable=False, unique=True)
     role = Column(String(255), nullable=False)
     purpose = Column(Text, nullable=True)
@@ -35,9 +34,9 @@ class AgentVersion(Base):
     temperature = Column(Float, nullable=False, default=0.7)
     
     # Policies stored as JSON configurations
-    tool_policy = Column(JSON, nullable=False, default=dict) # e.g. {"allowed": ["read_file"], "denied": ["delete_file"]}
-    memory_policy = Column(JSON, nullable=False, default=dict) # e.g. {"read_scopes": ["global", "agent", "project"], "write": true}
-    context_policy = Column(JSON, nullable=False, default=dict) # e.g. {"max_tokens": 4096}
+    tool_policy = Column(JSON, nullable=False, default=dict)
+    memory_policy = Column(JSON, nullable=False, default=dict)
+    context_policy = Column(JSON, nullable=False, default=dict)
     
     config = Column(JSON, nullable=True, default=dict)
     published_at = Column(DateTime(timezone=True), default=utc_now)

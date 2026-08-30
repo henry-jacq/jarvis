@@ -1,5 +1,4 @@
-from typing import Optional, List, Dict, Any
-# pyrefly: ignore [missing-import]
+from typing import Optional, List
 from sqlalchemy.orm import Session
 from app.models.agents import Agent, AgentVersion
 from app.schemas.agent import AgentCreate, AgentVersionCreate
@@ -13,14 +12,12 @@ class AgentService:
             name=payload.name,
             role=payload.role,
             purpose=payload.purpose,
-            application_id=payload.application_id,
             status=payload.status
         )
         self.db.add(agent)
         self.db.commit()
         self.db.refresh(agent)
 
-        # Create initial version v1
         ver_payload = payload.initial_version
         version = AgentVersion(
             agent_id=agent.id,
@@ -66,7 +63,6 @@ class AgentService:
         self.db.commit()
         self.db.refresh(version)
 
-        # Set as active version on agent
         agent = self.db.query(Agent).filter(Agent.id == agent_id).first()
         if agent:
             agent.active_version_id = version.id

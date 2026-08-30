@@ -27,7 +27,6 @@ class AgentBase(BaseModel):
     name: str
     role: str
     purpose: Optional[str] = None
-    application_id: Optional[str] = None
     status: str = "active"
 
 class AgentCreate(AgentBase):

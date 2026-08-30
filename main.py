@@ -39,3 +39,7 @@ def root():
     }
 
 app.include_router(api_v1_router, prefix=settings.API_V1_STR)
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run("main:app", host=settings.HOST, port=settings.PORT, reload=True)

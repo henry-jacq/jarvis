@@ -2,7 +2,6 @@ import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from app.core.db import Base
-from app.models.applications import Application
 from app.models.projects import Project
 from app.services.agent_service import AgentService
 from app.schemas.agent import AgentCreate, AgentVersionCreate
@@ -18,12 +17,7 @@ def db_session():
     session.close()
 
 def test_simple_agent_executor_flow(db_session):
-    # Setup App, Project, Agent
-    app = Application(name="App Exec", description="Execution Test App")
-    db_session.add(app)
-    db_session.commit()
-
-    proj = Project(application_id=app.id, name="Project Exec")
+    proj = Project(name="Project Exec", objective="Test agent execution harness")
     db_session.add(proj)
     db_session.commit()
 
@@ -32,7 +26,6 @@ def test_simple_agent_executor_flow(db_session):
         AgentCreate(
             name="Mock Agent",
             role="Test Automation Engineer",
-            application_id=app.id,
             initial_version=AgentVersionCreate(
                 system_prompt="Analyze code requirements.",
                 model_provider="mock",

@@ -1,5 +1,6 @@
 from app.core.db import Base
-from app.models.applications import Application
+from app.models.settings import AppSetting
+from app.models.conversations import Conversation, Message
 from app.models.projects import Project
 from app.models.agents import Agent, AgentVersion
 from app.models.prompts import Prompt, PromptVersion
@@ -11,7 +12,9 @@ from app.models.security import PermissionPolicy, AuditEvent
 
 __all__ = [
     "Base",
-    "Application",
+    "AppSetting",
+    "Conversation",
+    "Message",
     "Project",
     "Agent",
     "AgentVersion",

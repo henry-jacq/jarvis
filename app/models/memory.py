@@ -13,7 +13,6 @@ class GlobalMemory(Base):
     __tablename__ = "global_memory"
 
     id = Column(String(36), primary_key=True, default=generate_uuid)
-    application_id = Column(String(36), ForeignKey("applications.id"), nullable=True)
     category = Column(String(100), nullable=False, default="general") # preferences, conventions, terminology
     key = Column(String(255), nullable=False)
     content = Column(Text, nullable=False)

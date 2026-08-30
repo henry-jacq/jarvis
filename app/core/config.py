@@ -4,7 +4,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 class Settings(BaseSettings):
     PROJECT_NAME: str = "Jarvis Runtime Platform"
-    VERSION: str = "0.1.0"
+    VERSION: str = "0.2.0"
     API_V1_STR: str = "/api/v1"
     
     # Database
@@ -16,6 +16,10 @@ class Settings(BaseSettings):
     OPENAI_API_KEY: Optional[str] = None
     ANTHROPIC_API_KEY: Optional[str] = None
     
+    # Server
+    HOST: str = "0.0.0.0"
+    PORT: int = 8000
+
     # Platform
     LOG_LEVEL: str = "INFO"
     DEFAULT_TOKEN_BUDGET: int = 4096
