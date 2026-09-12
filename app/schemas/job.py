@@ -4,13 +4,15 @@ from pydantic import BaseModel, ConfigDict
 
 class JobCreate(BaseModel):
     task: str
-    agent_id: str
+    agent_id: Optional[str] = None
+    workflow_id: Optional[str] = None
     project_id: Optional[str] = None
     job_type: str = "IMMEDIATE" # IMMEDIATE, SCHEDULED
     priority: int = 0
     max_attempts: int = 3
     delay_seconds: int = 0
     override_config: Optional[Dict[str, Any]] = None
+
 
 class JobAttemptResponse(BaseModel):
     id: str

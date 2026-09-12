@@ -99,32 +99,86 @@ class MemoryManager:
         self,
         scopes: List[str],
         agent_id: Optional[str] = None,
-        project_id: Optional[str] = None
+        project_id: Optional[str] = None,
+        min_importance: float = 0.0
     ) -> Dict[str, List[Dict[str, Any]]]:
         """
-        Retrieves relevant memory items across requested scopes.
+        Retrieves relevant memory items across requested scopes with optional min_importance threshold.
         """
         results = {"global": [], "agent": [], "project": []}
 
         if "global" in scopes:
-            globals_items = self.db.query(GlobalMemory).all()
+            globals_items = self.db.query(GlobalMemory).filter(GlobalMemory.importance >= min_importance).all()
             results["global"] = [
                 {"key": m.key, "content": m.content, "category": m.category, "importance": m.importance}
                 for m in globals_items
             ]
 
         if "agent" in scopes and agent_id:
-            agent_items = self.db.query(AgentMemory).filter(AgentMemory.agent_id == agent_id).all()
+            agent_items = self.db.query(AgentMemory).filter(
+                AgentMemory.agent_id == agent_id,
+                AgentMemory.importance >= min_importance
+            ).all()
             results["agent"] = [
                 {"key": m.key, "content": m.content, "category": m.category, "importance": m.importance}
                 for m in agent_items
             ]
 
         if "project" in scopes and project_id:
-            project_items = self.db.query(ProjectMemory).filter(ProjectMemory.project_id == project_id).all()
+            project_items = self.db.query(ProjectMemory).filter(
+                ProjectMemory.project_id == project_id,
+                ProjectMemory.importance >= min_importance
+            ).all()
             results["project"] = [
                 {"key": m.key, "content": m.content, "category": m.category, "importance": m.importance}
                 for m in project_items
             ]
 
         return results
+
+    def apply_memory_decay(self, decay_factor: float = 0.9) -> int:
+        """
+        Decays memory importance across records to support soft eviction/pruning.
+        Returns total records updated.
+        """
+        updated_count = 0
+        for model in [GlobalMemory, AgentMemory, ProjectMemory]:
+            records = self.db.query(model).all()
+            for rec in records:
+                rec.importance = round(rec.importance * decay_factor, 2)
+                updated_count += 1
+        self.db.commit()
+        return updated_count
+
+    def search_vector_stubs(
+        self,
+        query: str,
+        scopes: List[str],
+        agent_id: Optional[str] = None,
+        project_id: Optional[str] = None,
+        top_k: int = 5
+    ) -> List[Dict[str, Any]]:
+        """
+        Vector similarity retrieval stub compatible with future embeddings index over MySQL.
+        Performs keyword match filtering over memory contents.
+        """
+        all_memories = self.get_memory_for_context(scopes, agent_id, project_id)
+        flat_list = []
+        for scope, items in all_memories.items():
+            for item in items:
+                item_copy = dict(item)
+                item_copy["scope"] = scope
+                flat_list.append(item_copy)
+
+        q_terms = query.lower().split()
+        matched = []
+        for item in flat_list:
+            text = (item["key"] + " " + item["content"]).lower()
+            score = sum(1 for term in q_terms if term in text)
+            if score > 0:
+                item["score"] = score
+                matched.append(item)
+
+        matched.sort(key=lambda x: x.get("score", 0), reverse=True)
+        return matched[:top_k]
+

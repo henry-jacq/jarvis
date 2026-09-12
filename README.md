@@ -87,10 +87,11 @@ Access interactive API docs at [http://localhost:8000/docs](http://localhost:800
 
 ## 🧪 Running Tests
 
-Run the 19-test suite covering dynamic workflows, HITL pause/resume flow, `REVIEW` tool policy gating, graph validation, multi-agent execution, checkpointing, generic queue operations, background job retries, cron scheduling, context building, memory management, and conversations:
+Run the 22-test suite covering background workflow job execution, memory decay/eviction, vector retrieval stubs, dynamic workflows, HITL pause/resume flow, `REVIEW` tool policy gating, graph validation, multi-agent execution, checkpointing, generic queue operations, background job retries, cron scheduling, context building, memory management, and conversations:
 ```bash
 pytest -v
 ```
+
 
 ---
 

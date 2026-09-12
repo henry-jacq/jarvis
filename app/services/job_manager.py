@@ -34,23 +34,38 @@ class JobManager:
         self.db.commit()
         self.db.refresh(job)
 
-        # 2. Enqueue Generic Work Payload in QueueService
+        # 2. Determine Payload Type & Payload Info
+        if payload.workflow_id:
+            payload_type = "workflow_execution"
+            msg_payload = {
+                "job_id": job.id,
+                "task": payload.task,
+                "workflow_id": payload.workflow_id,
+                "project_id": payload.project_id,
+                "override_config": payload.override_config or {}
+            }
+        else:
+            payload_type = "agent_execution"
+            msg_payload = {
+                "job_id": job.id,
+                "task": payload.task,
+                "agent_id": payload.agent_id,
+                "project_id": payload.project_id,
+                "override_config": payload.override_config or {}
+            }
+
+        # Enqueue Generic Work Payload in QueueService
         queue_msg = self.queue_service.enqueue(
             QueueMessageCreate(
                 topic="default",
-                payload_type="agent_execution",
-                payload={
-                    "job_id": job.id,
-                    "task": payload.task,
-                    "agent_id": payload.agent_id,
-                    "project_id": payload.project_id,
-                    "override_config": payload.override_config or {}
-                },
+                payload_type=payload_type,
+                payload=msg_payload,
                 priority=payload.priority,
                 max_attempts=payload.max_attempts,
                 delay_seconds=payload.delay_seconds
             )
         )
+
 
         job.queue_message_id = queue_msg.id
         job.status = "QUEUED"

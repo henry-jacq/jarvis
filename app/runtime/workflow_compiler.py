@@ -7,10 +7,13 @@ class WorkflowCompiler:
     Checks for cycle locks, unreferenced target nodes, and missing agent bindings.
     """
 
-    def validate_graph(self, nodes: List[WorkflowNode], edges: List[WorkflowEdge]) -> Dict[str, Any]:
+    def validate_graph(self, nodes: List[WorkflowNode], edges: List[WorkflowEdge], max_nodes: int = 20) -> Dict[str, Any]:
         node_keys = {n.node_key for n in nodes}
         if not node_keys:
             raise ValueError("Workflow graph contains no nodes.")
+
+        if len(nodes) > max_nodes:
+            raise ValueError(f"Workflow exceeds maximum allowed node count ({len(nodes)} > {max_nodes}).")
 
         # Check edge validity
         for edge in edges:
@@ -30,3 +33,4 @@ class WorkflowCompiler:
             "node_count": len(nodes),
             "edge_count": len(edges)
         }
+

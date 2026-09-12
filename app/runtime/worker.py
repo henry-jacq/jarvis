@@ -6,6 +6,7 @@ from app.core.db import SessionLocal
 from app.services.queue_service import QueueService
 from app.services.job_manager import JobManager
 from app.runtime.executor import SimpleAgentExecutor
+from app.runtime.workflow_executor import StaticWorkflowExecutor
 from app.models.jobs import Job
 
 logger = logging.getLogger(__name__)
@@ -13,7 +14,7 @@ logger = logging.getLogger(__name__)
 class WorkerEngine:
     """
     Background Worker Execution Engine.
-    Claims generic QueueMessage payloads from QueueService, executes agent tasks,
+    Claims generic QueueMessage payloads from QueueService, executes agent & workflow tasks,
     handles backoff retries, and records attempt telemetry.
     """
 
@@ -80,6 +81,47 @@ class WorkerEngine:
                             error_message=err
                         )
 
+            elif msg.payload_type == "workflow_execution":
+                task = msg.payload.get("task")
+                workflow_id = msg.payload.get("workflow_id")
+                project_id = msg.payload.get("project_id")
+                override_config = msg.payload.get("override_config")
+
+                wf_executor = StaticWorkflowExecutor(db)
+                execution = wf_executor.execute(
+                    workflow_id=workflow_id,
+                    task=task,
+                    project_id=project_id,
+                    override_config=override_config
+                )
+
+                latency_ms = round((time.time() - start_time) * 1000, 2)
+
+                if execution.status in ["COMPLETED", "WAITING_FOR_APPROVAL"]:
+                    queue_svc.complete_message(msg.id)
+                    if job_id:
+                        job = job_mgr.get_job(job_id)
+                        if job:
+                            job.execution_id = execution.id
+                            db.commit()
+                        job_mgr.record_attempt(
+                            job_id=job_id,
+                            attempt_number=msg.attempts,
+                            status="SUCCESS",
+                            latency_ms=latency_ms
+                        )
+                else:
+                    err = execution.error_message or "Workflow execution failed"
+                    queue_svc.fail_message(msg.id, err)
+                    if job_id:
+                        job_mgr.record_attempt(
+                            job_id=job_id,
+                            attempt_number=msg.attempts,
+                            status="FAILURE",
+                            latency_ms=latency_ms,
+                            error_message=err
+                        )
+
             else:
                 # Custom payload types handled successfully
                 latency_ms = round((time.time() - start_time) * 1000, 2)
@@ -91,6 +133,7 @@ class WorkerEngine:
                         status="SUCCESS",
                         latency_ms=latency_ms
                     )
+
 
             return True
 
