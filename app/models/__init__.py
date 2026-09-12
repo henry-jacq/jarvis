@@ -7,9 +7,17 @@ from app.models.prompts import Prompt, PromptVersion
 from app.models.models import ModelProvider, ModelConfig
 from app.models.tools import Tool, ToolVersion
 from app.models.memory import GlobalMemory, AgentMemory, ProjectMemory
-from app.models.executions import Execution, ExecutionEvent, Artifact
+from app.models.executions import Execution, ExecutionEvent, Artifact, ExecutionApprovalRequest
 from app.models.queue import QueueMessage
 from app.models.jobs import Job, JobAttempt, Schedule
+from app.models.workflows import (
+    Workflow,
+    WorkflowVersion,
+    WorkflowNode,
+    WorkflowEdge,
+    WorkflowAgentBinding,
+    ExecutionCheckpoint
+)
 from app.models.security import PermissionPolicy, AuditEvent
 
 __all__ = [
@@ -32,10 +40,17 @@ __all__ = [
     "Execution",
     "ExecutionEvent",
     "Artifact",
+    "ExecutionApprovalRequest",
     "QueueMessage",
     "Job",
     "JobAttempt",
     "Schedule",
+    "Workflow",
+    "WorkflowVersion",
+    "WorkflowNode",
+    "WorkflowEdge",
+    "WorkflowAgentBinding",
+    "ExecutionCheckpoint",
     "PermissionPolicy",
     "AuditEvent",
 ]

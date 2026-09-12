@@ -37,3 +37,22 @@ class ExecutionResponse(BaseModel):
     events: Optional[List[ExecutionEventResponse]] = None
 
     model_config = ConfigDict(from_attributes=True)
+
+class ApprovalDecisionRequest(BaseModel):
+    decision: str # APPROVED, REJECTED
+    feedback: Optional[str] = None
+
+class ApprovalRequestResponse(BaseModel):
+    id: str
+    execution_id: str
+    node_key: Optional[str]
+    request_type: str
+    tool_name: Optional[str]
+    tool_args: Optional[Dict[str, Any]]
+    status: str
+    reviewer_feedback: Optional[str]
+    created_at: datetime
+    resolved_at: Optional[datetime]
+
+    model_config = ConfigDict(from_attributes=True)
+

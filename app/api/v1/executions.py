@@ -2,11 +2,45 @@ from typing import List
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from app.core.db import get_db
-from app.models.executions import Execution, ExecutionEvent
+from app.models.executions import Execution, ExecutionEvent, ExecutionApprovalRequest
 from app.runtime.executor import SimpleAgentExecutor
-from app.schemas.execution import ExecutionRequest, ExecutionResponse, ExecutionEventResponse
+from app.runtime.workflow_executor import StaticWorkflowExecutor
+from app.services.workflow_service import WorkflowService
+from app.schemas.execution import (
+    ExecutionRequest,
+    ExecutionResponse,
+    ExecutionEventResponse,
+    ApprovalRequestResponse,
+    ApprovalDecisionRequest
+)
 
 router = APIRouter(prefix="/executions", tags=["Executions"])
+
+@router.get("/approvals/pending", response_model=List[ApprovalRequestResponse])
+def list_pending_approvals(db: Session = Depends(get_db)):
+    wf_svc = WorkflowService(db)
+    return wf_svc.list_pending_approvals()
+
+@router.post("/{execution_id}/approvals/{approval_id}/decision", response_model=ExecutionResponse)
+def submit_approval_decision(
+    execution_id: str,
+    approval_id: str,
+    payload: ApprovalDecisionRequest,
+    db: Session = Depends(get_db)
+):
+    wf_executor = StaticWorkflowExecutor(db)
+    try:
+        execution = wf_executor.resume_execution(
+            execution_id=execution_id,
+            approval_id=approval_id,
+            decision=payload.decision,
+            feedback=payload.feedback
+        )
+        return execution
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to submit decision: {str(e)}")
 
 @router.post("/submit", response_model=ExecutionResponse)
 def submit_execution(payload: ExecutionRequest, db: Session = Depends(get_db)):
@@ -41,3 +75,4 @@ def get_execution_events(execution_id: str, db: Session = Depends(get_db)):
         ExecutionEvent.execution_id == execution_id
     ).order_by(ExecutionEvent.timestamp.asc()).all()
     return events
+

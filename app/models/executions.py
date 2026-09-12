@@ -59,3 +59,18 @@ class Artifact(Base):
     location = Column(String(512), nullable=False)
     metadata_info = Column(JSON, nullable=True, default=dict)
     created_at = Column(DateTime(timezone=True), default=utc_now)
+
+
+class ExecutionApprovalRequest(Base):
+    __tablename__ = "execution_approval_requests"
+
+    id = Column(String(36), primary_key=True, default=generate_uuid)
+    execution_id = Column(String(36), ForeignKey("executions.id"), nullable=False)
+    node_key = Column(String(255), nullable=True)
+    request_type = Column(String(50), nullable=False) # NODE_APPROVAL, TOOL_EXECUTION
+    tool_name = Column(String(255), nullable=True)
+    tool_args = Column(JSON, nullable=True, default=dict)
+    status = Column(String(50), nullable=False, default="PENDING") # PENDING, APPROVED, REJECTED
+    reviewer_feedback = Column(Text, nullable=True)
+    created_at = Column(DateTime(timezone=True), default=utc_now)
+    resolved_at = Column(DateTime(timezone=True), nullable=True)

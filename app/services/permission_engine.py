@@ -2,6 +2,7 @@ from typing import Dict, Any, Tuple
 from sqlalchemy.orm import Session
 from app.models.security import PermissionPolicy, AuditEvent
 from app.models.agents import AgentVersion
+from app.models.executions import ExecutionApprovalRequest
 
 class PermissionEngine:
     """
@@ -43,6 +44,16 @@ class PermissionEngine:
             decision = "DENY"
             reason = f"Tool '{tool_name}' is not in allowed tools list {allowed}."
 
+        if decision == "REVIEW" and execution_id:
+            approval = ExecutionApprovalRequest(
+                execution_id=execution_id,
+                request_type="TOOL_EXECUTION",
+                tool_name=tool_name,
+                tool_args=tool_args,
+                status="PENDING"
+            )
+            self.db.add(approval)
+
         # Audit event record
         audit_entry = AuditEvent(
             actor=f"agent_version:{agent_version.id}",
@@ -58,3 +69,4 @@ class PermissionEngine:
         self.db.commit()
 
         return decision, reason
+
