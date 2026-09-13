@@ -85,7 +85,42 @@ Access interactive API docs at [http://localhost:8000/docs](http://localhost:800
 
 ---
 
+## 🔌 Claude Desktop Integration (MCP)
+
+Jarvis includes a native **Model Context Protocol (MCP)** server (`mcp_server.py`) allowing **Claude Desktop** to connect to Jarvis control plane tools directly.
+
+### Claude Desktop Configuration
+Add Jarvis MCP server to your `%APPDATA%\Claude\claude_desktop_config.json` (on Windows):
+
+```json
+{
+  "mcpServers": {
+    "jarvis": {
+      "command": "d:\\Playground\\Jarvis\\venv\\Scripts\\python.exe",
+      "args": [
+        "d:\\Playground\\Jarvis\\mcp_server.py"
+      ],
+      "env": {
+        "DATABASE_URL": "mysql+pymysql://root:root@localhost:3306/jarvis"
+      }
+    }
+  }
+}
+```
+
+
+### Available MCP Tools in Claude Desktop:
+- `jarvis_get_system_status`: Inspect queue status, jobs, and pending HITL approvals.
+- `jarvis_submit_task`: Execute single-agent tasks on Jarvis.
+- `jarvis_list_workflows`: List multi-agent pipelines and dynamic workflows.
+- `jarvis_execute_workflow`: Trigger multi-agent workflows (*Planner* -> *Coder* -> *Reviewer*).
+- `jarvis_list_pending_approvals`: Inspect Human-in-the-Loop approval requests.
+- `jarvis_submit_approval_decision`: Approve or reject paused workflow executions.
+
+---
+
 ## 🧪 Running Tests
+
 
 Run the 22-test suite covering background workflow job execution, memory decay/eviction, vector retrieval stubs, dynamic workflows, HITL pause/resume flow, `REVIEW` tool policy gating, graph validation, multi-agent execution, checkpointing, generic queue operations, background job retries, cron scheduling, context building, memory management, and conversations:
 ```bash
